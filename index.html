@@ -82,6 +82,7 @@
         /* Visualization */
         .vis-title { font-weight: bold; margin-bottom: 5px; font-size: 18px; }
         .vis-subtitle { font-size: 14px; color: #aaa; margin-bottom: 40px; }
+        .interpretation { margin-top: 30px; font-size: 16px; color: #a5d6ff; line-height: 1.4; border-top: 1px solid #444; padding-top: 20px; }
         
         .vis-container {
             position: relative;
@@ -126,46 +127,48 @@
     <div class="app-container">
         <div class="left-panel">
             <div class="top-icons">
-                <span class="icon-btn">↺</span>
-                <span class="icon-btn">⧉</span>
+                <span class="icon-btn" id="reset-btn" title="Reset">↺</span>
+                <span class="icon-btn" id="copy-btn" title="Copy Formula">⧉</span>
             </div>
             <div class="main-formula" id="main-formula"></div>
             
             <div class="slider-row">
                 <div class="slider-label" id="label-pb-text"></div>
-                <div class="slider-val" id="val-pb">0.74</div>
-                <input type="range" id="pb" min="0.01" max="1.0" step="0.01" value="0.74">
+                <div class="slider-val" id="val-pb">0.40</div>
+                <input type="range" id="pb" min="0.01" max="1.0" step="0.01" value="0.40">
             </div>
             
             <div class="slider-row">
                 <div class="slider-label" id="label-pab-text"></div>
-                <div class="slider-val" id="val-pab">0.30</div>
-                <input type="range" id="pab" min="0.00" max="1.0" step="0.01" value="0.30">
+                <div class="slider-val" id="val-pab">0.35</div>
+                <input type="range" id="pab" min="0.00" max="1.0" step="0.01" value="0.35">
             </div>
 
             <div class="calculation" id="calc-formula"></div>
         </div>
 
         <div class="right-panel">
-            <div class="vis-title" id="vis-title">P(A|B) &approx; 0.41</div>
-            <div class="vis-subtitle">A&cap;B is the part of B where A also happens</div>
+            <div class="vis-title" id="vis-title">P(S|I) &approx; 0.875</div>
+            <div class="vis-subtitle">S&cap;I is the part of I where S also happens</div>
             
             <div class="vis-container">
-                <div class="vis-pb" id="box-pb" style="width: 74%;">
-                    <div class="label-pb" id="box-label-pb">P(B)=0.74</div>
-                    <div class="vis-pab" id="box-pab" style="width: 40.5%;">
-                        <div class="label-pab" id="box-label-pab">P(A&cap;B)=0.30</div>
+                <div class="vis-pb" id="box-pb" style="width: 40%;">
+                    <div class="label-pb" id="box-label-pb">P(I)=0.40</div>
+                    <div class="vis-pab" id="box-pab" style="width: 87.5%;">
+                        <div class="label-pab" id="box-label-pab">P(S&cap;I)=0.35</div>
                     </div>
                 </div>
             </div>
+            
+            <div class="interpretation" id="interpretation"></div>
         </div>
     </div>
 
     <script>
         document.addEventListener("DOMContentLoaded", () => {
-            katex.render("P(A|B) = \\frac{P(A \\cap B)}{P(B)}", document.getElementById("main-formula"));
-            katex.render("P(B)", document.getElementById("label-pb-text"));
-            katex.render("P(A \\cap B)", document.getElementById("label-pab-text"));
+            katex.render("P(S|I) = \\frac{P(S \\cap I)}{P(I)}", document.getElementById("main-formula"));
+            katex.render("P(I)", document.getElementById("label-pb-text"));
+            katex.render("P(S \\cap I)", document.getElementById("label-pab-text"));
 
             const pbSlider = document.getElementById("pb");
             const pabSlider = document.getElementById("pab");
@@ -180,12 +183,17 @@
             const boxPab = document.getElementById("box-pab");
             const boxLabelPb = document.getElementById("box-label-pb");
             const boxLabelPab = document.getElementById("box-label-pab");
+            const interpretationText = document.getElementById("interpretation");
+            const resetBtn = document.getElementById("reset-btn");
+            const copyBtn = document.getElementById("copy-btn");
+
+            let currentFormulaText = "";
 
             function update() {
                 let pb = parseFloat(pbSlider.value);
                 let pab = parseFloat(pabSlider.value);
 
-                // Enforce P(A ∩ B) <= P(B) -> Cannot be greater than P(B)
+                // Enforce P(S ∩ I) <= P(I) -> Cannot be greater than P(I)
                 if (pab > pb) {
                     pab = pb;
                     pabSlider.value = pb.toFixed(2);
@@ -196,19 +204,39 @@
 
                 const result = pb === 0 ? 0 : pab / pb;
                 
-                katex.render(`P(A|B) = \\frac{${pab.toFixed(2)}}{${pb.toFixed(2)}} \\approx ${result.toFixed(2)}`, calcFormula);
+                katex.render(`P(S|I) = \\frac{${pab.toFixed(2)}}{${pb.toFixed(2)}} \\approx ${result.toFixed(3)}`, calcFormula);
+                currentFormulaText = `P(S|I) = ${pab.toFixed(2)} / ${pb.toFixed(2)} ≈ ${result.toFixed(3)}`;
                 
-                visTitle.innerText = `P(A|B) ≈ ${result.toFixed(2)}`;
+                visTitle.innerText = `P(S|I) ≈ ${result.toFixed(3)}`;
+                interpretationText.innerText = `Interpretation: ${(result * 100).toFixed(1)}% probability of short burst given process is I/O-bound`;
                 
                 boxPb.style.width = (pb * 100) + "%";
                 boxPab.style.width = pb === 0 ? "0%" : ((pab / pb) * 100) + "%";
                 
-                boxLabelPb.innerText = `P(B)=${pb.toFixed(2)}`;
-                boxLabelPab.innerText = `P(A∩B)=${pab.toFixed(2)}`;
+                boxLabelPb.innerText = `P(I)=${pb.toFixed(2)}`;
+                boxLabelPab.innerText = `P(S∩I)=${pab.toFixed(2)}`;
             }
 
             pbSlider.addEventListener("input", update);
             pabSlider.addEventListener("input", update);
+            
+            resetBtn.addEventListener("click", () => {
+                pbSlider.value = "0.40";
+                pabSlider.value = "0.35";
+                update();
+            });
+
+            copyBtn.addEventListener("click", () => {
+                navigator.clipboard.writeText(currentFormulaText).then(() => {
+                    const originalText = copyBtn.innerText;
+                    copyBtn.innerText = "✓";
+                    copyBtn.style.color = "#4ade80";
+                    setTimeout(() => {
+                        copyBtn.innerText = originalText;
+                        copyBtn.style.color = ""; // reset to default
+                    }, 1500);
+                });
+            });
             
             update();
         });
